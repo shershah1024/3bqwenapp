@@ -2,13 +2,12 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from PIL import Image
 from io import BytesIO
-import base64
 import torch
 import zipfile
 import requests
 import os
-
-from maestro.trainer.models.qwen_2_5_vl.checkpoints import load_model
+from transformers import AutoProcessor, AutoModelForCausalLM
+from peft import PeftModel
 
 app = FastAPI()
 
@@ -28,8 +27,18 @@ def download_and_extract(url, dest="lora_adapter"):
 adapter_url = "https://mbjkvwatoiryvmskgewn.supabase.co/storage/v1/object/public/site_files//4.zip"
 download_and_extract(adapter_url)
 
-# --- Load model (once) ---
-processor, model = load_model("lora_adapter")
+# --- Load base model + processor from Hugging Face ---
+BASE_MODEL = "Qwen/Qwen2.5-VL-3B-Instruct"
+processor = AutoProcessor.from_pretrained(BASE_MODEL)
+base_model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# --- Apply LoRA adapter ---
+model = PeftModel.from_pretrained(base_model, "lora_adapter")
+model.eval()
 
 # --- Inference endpoint ---
 @app.post("/infer")
