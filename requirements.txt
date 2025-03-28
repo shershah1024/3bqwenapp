@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+Pillow
+torch
+transformers
+peft
+maestro[qwen_2_5_vl]==1.1.0rc3
+requests
+python-multipart
